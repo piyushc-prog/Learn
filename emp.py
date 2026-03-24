@@ -1,82 +1,95 @@
 import json
+import psycopg2
+
+def get_db():
+    return psycopg2.connect(
+        host = '',
+        database = '',
+        user = '',
+        password = '',
+        port  = ''
+    )
 class Employee:
     def __init__(self,emp_id,name,salary):
-        self.emp_Detail = []
-        
-
-        try:
-            self.emp_id = emp_id
-            self.name = name
-            self.salary = salary
-            if self.salary < 0:
-                raise ValueError
-        except:
-            self.emp_id = emp_id
-            self.name = name
-            self.salary = salary
-            self.emp_Detail.append(self.emp_id,self.name,self.salary)
+        self.emp_id = emp_id
+        self.name = name
+        self.salary = salary
+        if self.salary < 0: raise ValueError("Negative salary")
 
     def display_details(self):
-        print(f'the employee name is {self.name} ,id is {self.emp_id}  and salary is {self.salary}')
+        print(f'the employee name is {self.name} ,id is {self.emp_id} and salary is {self.salary}')
 
 class manager(Employee):
-    def __init__(self,size):
+    def __init__(self,emp_id,name,salary,size):
+        super().__init__(emp_id, name, salary)
         self.size = size
     def display_details(self):
-        print(f'the employee name is {self.name} ,id is {self.emp_id}  and salary is {self.salary} the team size if f{self.size}')
-
-    with open('emp_details.json','w') as save_emp:
-        json.dump(save_emp)
-
+        print(f'the employee name is {self.name} ,id is {self.emp_id} and salary is {self.salary} the team size is {self.size}')
 
 class developer(Employee):
-    def __init__(self,lang):
+    def __init__(self,emp_id,name,salary,lang):
+        super().__init__(emp_id, name, salary)
         self.lang = lang
     
     def display_details(self):
-        print(f'he employee name is {self.name} ,id is {self.emp_id}  and salary is {self.salary} the programming langunge is {self.lang}')
+        print(f'the employee name is {self.name} ,id is {self.emp_id} and salary is {self.salary} the programming language is {self.lang}')
 
 class EmployeeManager:
+    def __init__(self):
+        self.employees = []
 
-    def __init__(self,id):
-        self.id = id
-
-    def add_employee(self):
-        if self.id == self.emp_id:
-            self.emp_list.append(self.id)
-        else:
-            raise ValueError
+    def add_employee(self,emp):
+        for e in self.employees:
+            if e.emp_id == emp.emp_id: raise ValueError("Duplicate ID")
+        self.employees.append(emp)
     
-    def remove_employee(self):
-        if self.id == self.emp_id:
-            self.emp_list.remove(self.id)
-        else:
-            raise ValueError
+    def remove_employee(self,emp_id):
+        self.employees.remove(self.get_employee(emp_id))
     
-    def get_employee(self):
-        if self.id  == self.emp_id:
-            return self.id
-        else:
-            raise ValueError
+    def get_employee(self,emp_id):
+        for e in self.employees:
+            if e.emp_id == emp_id: return e
+        raise KeyError("Employee not found")
         
     def display_all(self):
-
-        if len(self.emp_Details) > 0:
-            print(f' the details of employees are {self.emp_Details}')
+        if len(self.employees) > 0:
+            for e in self.employees: e.display_details()
         else:
-            print(' the list is empty')
+            print('the list is empty')
         
     def load(self):
         try:
             with open('emp_details.json','r') as read:
-                json.dump(read)
+                data = json.load(read)
+            self.employees = []
+            for d in data:
+                if d.get('type') == 'manager':
+                    self.employees.append(manager(**d))
+                else:
+                    self.employees.append(developer(**d))
         except:
             pass
-
-obj1 = manager(4)
-obj2 = manager(3)
-
-dev1 = developer('')
     
+    def save(self):
+        data = []
+        for e in self.employees:
+            d = {
+                'emp_id':e.emp_id,
+                'name':e.name,
+                'salary':e.salary,
+                'type':e.__class__.__name__
+            }
+            if hasattr(e,'size'): d['size'] = e.size
+            if hasattr(e,'lang'): d['lang'] = e.lang
+            data.append(d)
+        with open('emp_details.json','w') as f: json.dump(data, f)
 
-    
+if __name__ == "__main__":
+    em = EmployeeManager()
+    em.add_employee(manager(1,"Aman",10300,5))
+    em.add_employee(developer(2,"Naman",12800,"Py"))
+    em.display_all()
+    em.save()
+    em2 = EmployeeManager()
+    em2.load()
+    em2.display_all()
